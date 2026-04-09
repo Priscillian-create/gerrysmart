@@ -1,0 +1,105 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+enum PaymentMethod {
+  cash
+  pos
+  transfer
+}
+
+enum UserRole {
+  admin
+  cashier
+}
+
+model Product {
+  id         String     @id @default(uuid()) @db.Char(36)
+  name       String     @db.VarChar(191)
+  category   String     @db.VarChar(100)
+  price      Decimal    @db.Decimal(12, 2)
+  stock      Int        @default(0)
+  barcode    String?    @unique @db.VarChar(191)
+  expiryDate DateTime?
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+  saleItems  SaleItem[]
+  purchases  Purchase[]
+
+  @@index([category])
+  @@index([createdAt])
+}
+
+model Sale {
+  id             String        @id @default(uuid()) @db.Char(36)
+  receiptNumber  String        @unique @db.VarChar(191)
+  total          Decimal       @db.Decimal(12, 2)
+  paymentMethod  PaymentMethod
+  idempotencyKey String        @unique @db.VarChar(191)
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  deletedAt      DateTime?
+  userId         String?       @db.Char(36)
+  user           User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
+  items          SaleItem[]
+
+  @@index([createdAt])
+  @@index([paymentMethod, createdAt])
+  @@index([userId])
+}
+
+model SaleItem {
+  id        String   @id @default(uuid()) @db.Char(36)
+  saleId    String   @db.Char(36)
+  productId String   @db.Char(36)
+  quantity  Int
+  price     Decimal  @db.Decimal(12, 2)
+  sale      Sale     @relation(fields: [saleId], references: [id], onDelete: Cascade)
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Restrict)
+
+  @@index([saleId])
+  @@index([productId])
+}
+
+model Expense {
+  id          String   @id @default(uuid()) @db.Char(36)
+  description String   @db.VarChar(191)
+  category    String   @db.VarChar(100)
+  amount      Decimal  @db.Decimal(12, 2)
+  date        DateTime
+  createdAt   DateTime @default(now())
+
+  @@index([category])
+  @@index([date])
+}
+
+model Purchase {
+  id        String   @id @default(uuid()) @db.Char(36)
+  supplier  String   @db.VarChar(191)
+  productId String   @db.Char(36)
+  quantity  Int
+  unitCost  Decimal  @db.Decimal(12, 2)
+  unitSell  Decimal  @db.Decimal(12, 2)
+  createdAt DateTime @default(now())
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Restrict)
+
+  @@index([productId])
+  @@index([createdAt])
+}
+
+model User {
+  id        String   @id @default(uuid()) @db.Char(36)
+  email     String   @unique @db.VarChar(191)
+  password  String   @db.VarChar(191)
+  role      UserRole
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  sales     Sale[]
+
+  @@index([createdAt])
+}

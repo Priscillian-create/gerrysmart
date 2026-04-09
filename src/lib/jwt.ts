@@ -1,0 +1,35 @@
+import { SignJWT, jwtVerify } from "jose";
+import { getEnv } from "@/lib/env";
+
+export type AuthTokenPayload = {
+  sub: string;
+  email: string;
+  role: "admin" | "cashier";
+};
+
+export async function signAccessToken(payload: AuthTokenPayload) {
+  const env = getEnv();
+  const secret = new TextEncoder().encode(env.JWT_SECRET);
+
+  return new SignJWT({
+    email: payload.email,
+    role: payload.role
+  })
+    .setProtectedHeader({ alg: "HS256" })
+    .setSubject(payload.sub)
+    .setIssuedAt()
+    .setExpirationTime(env.JWT_EXPIRES_IN)
+    .sign(secret);
+}
+
+export async function verifyAccessToken(token: string) {
+  const env = getEnv();
+  const secret = new TextEncoder().encode(env.JWT_SECRET);
+  const { payload } = await jwtVerify(token, secret);
+
+  return {
+    sub: String(payload.sub),
+    email: String(payload.email),
+    role: payload.role === "admin" ? "admin" : "cashier"
+  } satisfies AuthTokenPayload;
+}
