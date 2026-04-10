@@ -1,38 +1,10 @@
 export default async function handler(req, res) {
-  function getAllowedOrigins() {
-    const list = [];
-    const envList =
-      process.env.CORS_ORIGINS ||
-      process.env.FRONTEND_URLS ||
-      process.env.FRONTEND_URL ||
-      "";
-    if (envList) {
-      envList
-        .split(",")
-        .map((s) => s.trim())
-        .filter(Boolean)
-        .forEach((o) => list.push(o));
-    }
-    if (!list.includes("http://localhost:8090"))
-      list.push("http://localhost:8090");
-    return list;
-  }
-
   function setCors(res, originHeader) {
-    const allowed = getAllowedOrigins();
-    const origin = allowed.includes(originHeader)
-      ? originHeader
-      : allowed[0] || "*";
+    const allowedOrigin = originHeader || "";
     res.setHeader("Vary", "Origin");
-    res.setHeader("Access-Control-Allow-Origin", origin);
-    res.setHeader(
-      "Access-Control-Allow-Methods",
-      "GET,POST,PUT,DELETE,OPTIONS"
-    );
-    res.setHeader(
-      "Access-Control-Allow-Headers",
-      "Content-Type, Authorization, X-Requested-With"
-    );
+    res.setHeader("Access-Control-Allow-Origin", allowedOrigin);
+    res.setHeader("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,OPTIONS");
+    res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, Set-Cookie");
     res.setHeader("Access-Control-Allow-Credentials", "true");
   }
 
