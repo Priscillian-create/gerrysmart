@@ -13,8 +13,8 @@ export default async function handler(req, res) {
         .filter(Boolean)
         .forEach((o) => list.push(o));
     }
-    if (!list.includes("http://localhost:8081"))
-      list.push("http://localhost:8081");
+    if (!list.includes("http://localhost:8090"))
+      list.push("http://localhost:8090");
     return list;
   }
 
@@ -86,4 +86,3 @@ export default async function handler(req, res) {
 
   return methodNotAllowed(res);
 }
-
