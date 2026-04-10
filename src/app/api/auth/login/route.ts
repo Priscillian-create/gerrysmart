@@ -11,7 +11,8 @@ export const POST = withRoute(async (request) => {
   const body = await parseBody(request, loginSchema);
 
   const user = await prisma.user.findUnique({
-    where: { email: body.email }
+    where: { email: body.email },
+    select: { id: true, email: true, password: true, role: true }
   });
 
   if (!user) {
@@ -30,14 +31,16 @@ export const POST = withRoute(async (request) => {
     role: user.role
   });
 
+  const responseRole =
+    user.role === "cashier" ? "user" : user.role ?? "user";
+
   return NextResponse.json({
-    data: {
-      accessToken,
-      user: {
-        id: user.id,
-        email: user.email,
-        role: user.role
-      }
+    success: true,
+    token: accessToken,
+    user: {
+      id: user.id,
+      email: user.email,
+      role: responseRole
     }
   });
 });

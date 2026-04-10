@@ -3,6 +3,7 @@ import { getEnv } from "@/lib/env";
 
 export type AuthTokenPayload = {
   sub: string;
+  id?: string;
   email: string;
   role: "admin" | "cashier";
 };
@@ -12,6 +13,7 @@ export async function signAccessToken(payload: AuthTokenPayload) {
   const secret = new TextEncoder().encode(env.JWT_SECRET);
 
   return new SignJWT({
+    id: payload.sub,
     email: payload.email,
     role: payload.role
   })
@@ -29,6 +31,7 @@ export async function verifyAccessToken(token: string) {
 
   return {
     sub: String(payload.sub),
+    id: String(payload.id ?? payload.sub),
     email: String(payload.email),
     role: payload.role === "admin" ? "admin" : "cashier"
   } satisfies AuthTokenPayload;
