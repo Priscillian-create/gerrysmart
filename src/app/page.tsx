@@ -1,3 +1,15 @@
+"use client";
+
+import { useEffect, useMemo, useState } from "react";
+
+type Product = {
+  id: string;
+  name: string;
+  price: number | string;
+  stock: number | string;
+  category?: string | null;
+};
+
 const metrics = [
   {
     label: "Core domains",
@@ -54,7 +66,86 @@ const sections = [
   }
 ];
 
+const defaultProductsApiUrl =
+  "https://gerrysmart-4v36.vercel.app/api/products";
+
+function getProductsApiUrl() {
+  if (process.env.NEXT_PUBLIC_PRODUCTS_API_URL) {
+    return process.env.NEXT_PUBLIC_PRODUCTS_API_URL;
+  }
+
+  return defaultProductsApiUrl;
+}
+
+function formatPrice(value: number | string) {
+  const amount =
+    typeof value === "number" ? value : Number.parseFloat(String(value));
+
+  if (!Number.isFinite(amount)) {
+    return String(value);
+  }
+
+  return new Intl.NumberFormat("en-NG", {
+    style: "currency",
+    currency: "NGN",
+    minimumFractionDigits: 2
+  }).format(amount);
+}
+
 export default function HomePage() {
+  const [products, setProducts] = useState<Product[]>([]);
+  const [error, setError] = useState("");
+  const [isLoading, setIsLoading] = useState(true);
+  const productsApiUrl = useMemo(() => getProductsApiUrl(), []);
+
+  useEffect(() => {
+    const controller = new AbortController();
+
+    async function loadProducts() {
+      try {
+        setIsLoading(true);
+        setError("");
+
+        const response = await fetch(productsApiUrl, {
+          method: "GET",
+          signal: controller.signal,
+          cache: "no-store"
+        });
+
+        const result = await response.json();
+
+        console.log("[frontend] Products API response:", result);
+
+        if (!response.ok || !result.success) {
+          throw new Error(result.message || "Failed to load products.");
+        }
+
+        setProducts(Array.isArray(result.data) ? result.data : []);
+      } catch (fetchError) {
+        if (controller.signal.aborted) {
+          return;
+        }
+
+        const message =
+          fetchError instanceof Error
+            ? fetchError.message
+            : "Failed to load products.";
+
+        setError(message);
+      } finally {
+        if (!controller.signal.aborted) {
+          setIsLoading(false);
+        }
+      }
+    }
+
+    loadProducts();
+
+    return () => {
+      controller.abort();
+    };
+  }, [productsApiUrl]);
+
   return (
     <main
       style={{
@@ -177,6 +268,28 @@ export default function HomePage() {
                   API-first POS foundation
                 </div>
               </div>
+              <div
+                style={{
+                  padding: "12px 16px",
+                  borderRadius: 16,
+                  background: "rgba(148, 163, 184, 0.12)",
+                  border: "1px solid rgba(148, 163, 184, 0.16)"
+                }}
+              >
+                <div
+                  style={{
+                    fontSize: 12,
+                    textTransform: "uppercase",
+                    letterSpacing: "0.08em",
+                    color: "#94a3b8"
+                  }}
+                >
+                  Live catalog
+                </div>
+                <div style={{ marginTop: 6, fontWeight: 700 }}>
+                  {isLoading ? "Loading products..." : `${products.length} products loaded`}
+                </div>
+              </div>
             </div>
           </div>
 
@@ -250,6 +363,37 @@ export default function HomePage() {
                   </p>
                 </div>
               ))}
+              <div
+                style={{
+                  padding: 16,
+                  borderRadius: 18,
+                  background: "rgba(59, 130, 246, 0.1)",
+                  border: "1px solid rgba(96, 165, 250, 0.2)"
+                }}
+              >
+                <div
+                  style={{
+                    fontSize: 12,
+                    fontWeight: 700,
+                    letterSpacing: "0.08em",
+                    textTransform: "uppercase",
+                    color: "#93c5fd"
+                  }}
+                >
+                  Products API
+                </div>
+                <div
+                  style={{
+                    marginTop: 10,
+                    fontSize: 16,
+                    fontWeight: 700,
+                    color: "#eff6ff",
+                    wordBreak: "break-word"
+                  }}
+                >
+                  {productsApiUrl}
+                </div>
+              </div>
             </div>
           </aside>
         </section>
@@ -333,6 +477,146 @@ export default function HomePage() {
               </article>
             ))}
           </div>
+        </section>
+
+        <section
+          style={{
+            display: "grid",
+            gap: 18
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              flexWrap: "wrap",
+              justifyContent: "space-between",
+              alignItems: "end",
+              gap: 12
+            }}
+          >
+            <div style={{ display: "grid", gap: 8 }}>
+              <h2
+                style={{
+                  margin: 0,
+                  fontSize: 28,
+                  color: "#0f172a"
+                }}
+              >
+                Product catalog
+              </h2>
+              <p
+                style={{
+                  margin: 0,
+                  maxWidth: 760,
+                  color: "#475569",
+                  lineHeight: 1.7
+                }}
+              >
+                Live products now load from the TiDB-backed products API and render the name,
+                price, and stock values directly on the frontend.
+              </p>
+            </div>
+            <div
+              style={{
+                padding: "10px 14px",
+                borderRadius: 999,
+                background: "#ffffff",
+                border: "1px solid rgba(148, 163, 184, 0.18)",
+                color: "#334155",
+                fontWeight: 700
+              }}
+            >
+              {isLoading ? "Loading..." : `${products.length} items`}
+            </div>
+          </div>
+
+          {error ? (
+            <div
+              style={{
+                padding: 18,
+                borderRadius: 18,
+                background: "#fff7ed",
+                border: "1px solid #fdba74",
+                color: "#9a3412"
+              }}
+            >
+              {error}
+            </div>
+          ) : null}
+
+          {isLoading ? (
+            <div
+              style={{
+                padding: 24,
+                borderRadius: 22,
+                background: "#ffffff",
+                border: "1px solid rgba(148, 163, 184, 0.18)",
+                boxShadow: "0 18px 40px rgba(15, 23, 42, 0.08)",
+                color: "#475569"
+              }}
+            >
+              Loading products from {productsApiUrl}
+            </div>
+          ) : (
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
+                gap: 18
+              }}
+            >
+              {products.map((product) => (
+                <article
+                  key={product.id}
+                  style={{
+                    display: "grid",
+                    gap: 12,
+                    padding: 24,
+                    background: "#ffffff",
+                    borderRadius: 22,
+                    border: "1px solid rgba(148, 163, 184, 0.18)",
+                    boxShadow: "0 18px 40px rgba(15, 23, 42, 0.08)"
+                  }}
+                >
+                  <div style={{ display: "grid", gap: 6 }}>
+                    <h3 style={{ margin: 0, fontSize: 20, color: "#0f172a" }}>
+                      {product.name}
+                    </h3>
+                    <p style={{ margin: 0, color: "#64748b" }}>
+                      {product.category || "Uncategorized"}
+                    </p>
+                  </div>
+                  <div
+                    style={{
+                      display: "grid",
+                      gap: 8,
+                      color: "#1e293b"
+                    }}
+                  >
+                    <p style={{ margin: 0, fontWeight: 700 }}>
+                      Price: {formatPrice(product.price)}
+                    </p>
+                    <p style={{ margin: 0 }}>Stock: {product.stock}</p>
+                  </div>
+                </article>
+              ))}
+            </div>
+          )}
+
+          {!isLoading && !error && products.length === 0 ? (
+            <div
+              style={{
+                padding: 24,
+                borderRadius: 22,
+                background: "#ffffff",
+                border: "1px solid rgba(148, 163, 184, 0.18)",
+                boxShadow: "0 18px 40px rgba(15, 23, 42, 0.08)",
+                color: "#475569"
+              }}
+            >
+              No products were returned by the API.
+            </div>
+          ) : null}
         </section>
       </div>
     </main>
