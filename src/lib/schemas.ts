@@ -9,6 +9,12 @@ export const loginSchema = z.object({
   password: z.string().min(8)
 });
 
+export const registerSchema = z.object({
+  name: z.string().trim().min(1).max(191),
+  email: z.string().email(),
+  password: z.string().min(6).max(191)
+});
+
 export const productCreateSchema = z.object({
   name: z.string().trim().min(1).max(191),
   category: z.string().trim().min(1).max(100),

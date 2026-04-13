@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { type FormEvent, useEffect, useMemo, useState } from "react";
 
 type Product = {
   id: string;
@@ -8,6 +8,18 @@ type Product = {
   price: number | string;
   stock: number | string;
   category?: string | null;
+};
+
+type CreateUserForm = {
+  name: string;
+  email: string;
+  password: string;
+};
+
+type AuthSession = {
+  token: string;
+  role: string | null;
+  email: string | null;
 };
 
 const metrics = [
@@ -69,6 +81,21 @@ const sections = [
 const defaultProductsApiUrl =
   "https://gerrysmart-4v36.vercel.app/api/products";
 
+const userFormInitialState: CreateUserForm = {
+  name: "",
+  email: "",
+  password: ""
+};
+
+const tokenStorageKeys = [
+  "token",
+  "authToken",
+  "accessToken",
+  "posToken",
+  "pos_access_token",
+  "jwt"
+];
+
 function getProductsApiUrl() {
   if (process.env.NEXT_PUBLIC_PRODUCTS_API_URL) {
     return process.env.NEXT_PUBLIC_PRODUCTS_API_URL;
@@ -92,11 +119,64 @@ function formatPrice(value: number | string) {
   }).format(amount);
 }
 
+function decodeJwtPayload(token: string) {
+  try {
+    const [, payload] = token.split(".");
+
+    if (!payload) {
+      return null;
+    }
+
+    const normalized = payload.replace(/-/g, "+").replace(/_/g, "/");
+    const decoded = window.atob(normalized.padEnd(Math.ceil(normalized.length / 4) * 4, "="));
+
+    return JSON.parse(decoded) as {
+      email?: unknown;
+      role?: unknown;
+    };
+  } catch {
+    return null;
+  }
+}
+
+function getStoredAuthSession(): AuthSession | null {
+  for (const storage of [window.localStorage, window.sessionStorage]) {
+    for (const key of tokenStorageKeys) {
+      const token = storage.getItem(key)?.trim();
+
+      if (!token) {
+        continue;
+      }
+
+      const payload = decodeJwtPayload(token);
+
+      return {
+        token,
+        role: typeof payload?.role === "string" ? payload.role : null,
+        email: typeof payload?.email === "string" ? payload.email : null
+      };
+    }
+  }
+
+  return null;
+}
+
+function isValidEmail(value: string) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+}
+
 export default function HomePage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(true);
+  const [createUserForm, setCreateUserForm] = useState<CreateUserForm>(userFormInitialState);
+  const [createUserError, setCreateUserError] = useState("");
+  const [createUserSuccess, setCreateUserSuccess] = useState("");
+  const [isCreatingUser, setIsCreatingUser] = useState(false);
+  const [authSession, setAuthSession] = useState<AuthSession | null>(null);
+  const [isAuthResolved, setIsAuthResolved] = useState(false);
   const productsApiUrl = useMemo(() => getProductsApiUrl(), []);
+  const isAdmin = authSession?.role === "admin";
 
   useEffect(() => {
     const controller = new AbortController();
@@ -145,6 +225,86 @@ export default function HomePage() {
       controller.abort();
     };
   }, [productsApiUrl]);
+
+  useEffect(() => {
+    function syncAuthSession() {
+      setAuthSession(getStoredAuthSession());
+      setIsAuthResolved(true);
+    }
+
+    syncAuthSession();
+    window.addEventListener("storage", syncAuthSession);
+
+    return () => {
+      window.removeEventListener("storage", syncAuthSession);
+    };
+  }, []);
+
+  async function handleCreateUser(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setCreateUserError("");
+    setCreateUserSuccess("");
+
+    if (!isAdmin || !authSession?.token) {
+      setCreateUserError("Access denied. Sign in as an admin to create users.");
+      return;
+    }
+
+    const name = createUserForm.name.trim();
+    const email = createUserForm.email.trim().toLowerCase();
+    const password = createUserForm.password;
+
+    if (!name) {
+      setCreateUserError("Name is required.");
+      return;
+    }
+
+    if (!isValidEmail(email)) {
+      setCreateUserError("Enter a valid email address.");
+      return;
+    }
+
+    if (password.length < 6) {
+      setCreateUserError("Password must be at least 6 characters.");
+      return;
+    }
+
+    try {
+      setIsCreatingUser(true);
+
+      const response = await fetch("/api/auth/register", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${authSession.token}`
+        },
+        body: JSON.stringify({
+          name,
+          email,
+          password
+        })
+      });
+
+      const result = await response.json().catch(() => null);
+
+      if (!response.ok) {
+        throw new Error(
+          result?.error?.message || result?.message || "Failed to create user."
+        );
+      }
+
+      setCreateUserForm(userFormInitialState);
+      setCreateUserSuccess("User created successfully");
+    } catch (createUserRequestError) {
+      setCreateUserError(
+        createUserRequestError instanceof Error
+          ? createUserRequestError.message
+          : "Failed to create user."
+      );
+    } finally {
+      setIsCreatingUser(false);
+    }
+  }
 
   return (
     <main
@@ -617,6 +777,229 @@ export default function HomePage() {
               No products were returned by the API.
             </div>
           ) : null}
+        </section>
+
+        <section
+          style={{
+            display: "grid",
+            gap: 18
+          }}
+        >
+          <div style={{ display: "grid", gap: 8 }}>
+            <h2
+              style={{
+                margin: 0,
+                fontSize: 28,
+                color: "#0f172a"
+              }}
+            >
+              User Management / Create User
+            </h2>
+            <p
+              style={{
+                margin: 0,
+                maxWidth: 760,
+                color: "#475569",
+                lineHeight: 1.7
+              }}
+            >
+              Create dashboard users through the secured registration API. Only admins can
+              access this feature.
+            </p>
+          </div>
+
+          <div
+            style={{
+              display: "grid",
+              gap: 18,
+              padding: 24,
+              background: "#ffffff",
+              borderRadius: 22,
+              border: "1px solid rgba(148, 163, 184, 0.18)",
+              boxShadow: "0 18px 40px rgba(15, 23, 42, 0.08)"
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                flexWrap: "wrap",
+                justifyContent: "space-between",
+                gap: 12
+              }}
+            >
+              <div style={{ display: "grid", gap: 6 }}>
+                <strong style={{ fontSize: 20, color: "#0f172a" }}>Admin controls</strong>
+                <span style={{ color: "#64748b" }}>
+                  {isAuthResolved
+                    ? authSession?.email || "No active admin session found"
+                    : "Checking session..."}
+                </span>
+              </div>
+              <div
+                style={{
+                  alignSelf: "start",
+                  padding: "10px 14px",
+                  borderRadius: 999,
+                  background: isAdmin ? "#dcfce7" : "#fee2e2",
+                  color: isAdmin ? "#166534" : "#991b1b",
+                  fontWeight: 700
+                }}
+              >
+                {isAdmin ? "Admin access" : "Access denied"}
+              </div>
+            </div>
+
+            {createUserSuccess ? (
+              <div
+                style={{
+                  padding: 16,
+                  borderRadius: 18,
+                  background: "#dcfce7",
+                  border: "1px solid #86efac",
+                  color: "#166534"
+                }}
+              >
+                {createUserSuccess}
+              </div>
+            ) : null}
+
+            {createUserError ? (
+              <div
+                style={{
+                  padding: 16,
+                  borderRadius: 18,
+                  background: "#fef2f2",
+                  border: "1px solid #fca5a5",
+                  color: "#991b1b"
+                }}
+              >
+                {createUserError}
+              </div>
+            ) : null}
+
+            {isAdmin ? (
+              <form
+                onSubmit={handleCreateUser}
+                style={{
+                  display: "grid",
+                  gap: 16
+                }}
+              >
+                <label
+                  style={{
+                    display: "grid",
+                    gap: 8
+                  }}
+                >
+                  <span style={{ fontWeight: 700, color: "#334155" }}>Name</span>
+                  <input
+                    value={createUserForm.name}
+                    onChange={(event) =>
+                      setCreateUserForm((current) => ({
+                        ...current,
+                        name: event.target.value
+                      }))
+                    }
+                    placeholder="Enter full name"
+                    style={{
+                      width: "100%",
+                      padding: "14px 16px",
+                      borderRadius: 14,
+                      border: "1px solid #cbd5e1",
+                      fontSize: 16,
+                      outline: "none"
+                    }}
+                  />
+                </label>
+
+                <label
+                  style={{
+                    display: "grid",
+                    gap: 8
+                  }}
+                >
+                  <span style={{ fontWeight: 700, color: "#334155" }}>Email</span>
+                  <input
+                    type="email"
+                    value={createUserForm.email}
+                    onChange={(event) =>
+                      setCreateUserForm((current) => ({
+                        ...current,
+                        email: event.target.value
+                      }))
+                    }
+                    placeholder="Enter email address"
+                    style={{
+                      width: "100%",
+                      padding: "14px 16px",
+                      borderRadius: 14,
+                      border: "1px solid #cbd5e1",
+                      fontSize: 16,
+                      outline: "none"
+                    }}
+                  />
+                </label>
+
+                <label
+                  style={{
+                    display: "grid",
+                    gap: 8
+                  }}
+                >
+                  <span style={{ fontWeight: 700, color: "#334155" }}>Password</span>
+                  <input
+                    type="password"
+                    value={createUserForm.password}
+                    onChange={(event) =>
+                      setCreateUserForm((current) => ({
+                        ...current,
+                        password: event.target.value
+                      }))
+                    }
+                    placeholder="Enter password"
+                    style={{
+                      width: "100%",
+                      padding: "14px 16px",
+                      borderRadius: 14,
+                      border: "1px solid #cbd5e1",
+                      fontSize: 16,
+                      outline: "none"
+                    }}
+                  />
+                </label>
+
+                <button
+                  type="submit"
+                  disabled={isCreatingUser}
+                  style={{
+                    width: "fit-content",
+                    padding: "14px 22px",
+                    border: "none",
+                    borderRadius: 14,
+                    background: isCreatingUser ? "#94a3b8" : "#2563eb",
+                    color: "#ffffff",
+                    fontSize: 16,
+                    fontWeight: 700,
+                    cursor: isCreatingUser ? "not-allowed" : "pointer"
+                  }}
+                >
+                  {isCreatingUser ? "Creating User..." : "Create User"}
+                </button>
+              </form>
+            ) : (
+              <div
+                style={{
+                  padding: 18,
+                  borderRadius: 18,
+                  background: "#fff7ed",
+                  border: "1px solid #fdba74",
+                  color: "#9a3412"
+                }}
+              >
+                Access Denied
+              </div>
+            )}
+          </div>
         </section>
       </div>
     </main>
