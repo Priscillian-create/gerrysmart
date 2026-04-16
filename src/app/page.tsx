@@ -1,6 +1,6 @@
 "use client";
 
-import { type FormEvent, useEffect, useMemo, useState } from "react";
+import { type FormEvent, useEffect, useState } from "react";
 
 type Product = {
   id: string;
@@ -12,6 +12,11 @@ type Product = {
 
 type CreateUserForm = {
   name: string;
+  email: string;
+  password: string;
+};
+
+type LoginForm = {
   email: string;
   password: string;
 };
@@ -78,11 +83,13 @@ const sections = [
   }
 ];
 
-const defaultProductsApiUrl =
-  "https://gerrysmart-4v36.vercel.app/api/products";
-
 const userFormInitialState: CreateUserForm = {
   name: "",
+  email: "",
+  password: ""
+};
+
+const loginFormInitialState: LoginForm = {
   email: "",
   password: ""
 };
@@ -96,12 +103,20 @@ const tokenStorageKeys = [
   "jwt"
 ];
 
-function getProductsApiUrl() {
-  if (process.env.NEXT_PUBLIC_PRODUCTS_API_URL) {
-    return process.env.NEXT_PUBLIC_PRODUCTS_API_URL;
+const defaultApiBaseUrl =
+  process.env.NODE_ENV === "development"
+    ? ""
+    : "https://posbackend-amber.vercel.app";
+
+function buildApiUrl(path: string) {
+  const configuredBaseUrl =
+    process.env.NEXT_PUBLIC_API_BASE_URL?.trim() || defaultApiBaseUrl;
+
+  if (!configuredBaseUrl) {
+    return path;
   }
 
-  return defaultProductsApiUrl;
+  return `${configuredBaseUrl.replace(/\/+$/, "")}${path}`;
 }
 
 function formatPrice(value: number | string) {
@@ -161,6 +176,19 @@ function getStoredAuthSession(): AuthSession | null {
   return null;
 }
 
+function clearStoredAuthSession() {
+  for (const storage of [window.localStorage, window.sessionStorage]) {
+    for (const key of tokenStorageKeys) {
+      storage.removeItem(key);
+    }
+  }
+}
+
+function persistAuthSession(token: string) {
+  clearStoredAuthSession();
+  window.localStorage.setItem("authToken", token);
+}
+
 function isValidEmail(value: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
 }
@@ -169,19 +197,34 @@ export default function HomePage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(true);
+  const [loginForm, setLoginForm] = useState<LoginForm>(loginFormInitialState);
+  const [loginError, setLoginError] = useState("");
+  const [isSigningIn, setIsSigningIn] = useState(false);
   const [createUserForm, setCreateUserForm] = useState<CreateUserForm>(userFormInitialState);
   const [createUserError, setCreateUserError] = useState("");
   const [createUserSuccess, setCreateUserSuccess] = useState("");
   const [isCreatingUser, setIsCreatingUser] = useState(false);
   const [authSession, setAuthSession] = useState<AuthSession | null>(null);
   const [isAuthResolved, setIsAuthResolved] = useState(false);
-  const productsApiUrl = useMemo(() => getProductsApiUrl(), []);
+  const productsApiUrl = buildApiUrl("/api/products");
   const isAdmin = authSession?.role === "admin";
+  const isSignedIn = Boolean(authSession?.token);
 
   useEffect(() => {
     const controller = new AbortController();
 
     async function loadProducts() {
+      if (!isAuthResolved) {
+        return;
+      }
+
+      if (!authSession?.token) {
+        setProducts([]);
+        setError("");
+        setIsLoading(false);
+        return;
+      }
+
       try {
         setIsLoading(true);
         setError("");
@@ -189,18 +232,27 @@ export default function HomePage() {
         const response = await fetch(productsApiUrl, {
           method: "GET",
           signal: controller.signal,
-          cache: "no-store"
+          cache: "no-store",
+          headers: {
+            Authorization: `Bearer ${authSession.token}`
+          }
         });
 
-        const result = await response.json();
+        const result = await response.json().catch(() => null);
 
-        console.log("[frontend] Products API response:", result);
-
-        if (!response.ok || !result.success) {
-          throw new Error(result.message || "Failed to load products.");
+        if (response.status === 401) {
+          clearStoredAuthSession();
+          setAuthSession(null);
+          throw new Error(result?.error?.message || "Session expired. Sign in again.");
         }
 
-        setProducts(Array.isArray(result.data) ? result.data : []);
+        if (!response.ok) {
+          throw new Error(
+            result?.error?.message || result?.message || "Failed to load products."
+          );
+        }
+
+        setProducts(Array.isArray(result?.data) ? result.data : []);
       } catch (fetchError) {
         if (controller.signal.aborted) {
           return;
@@ -224,7 +276,7 @@ export default function HomePage() {
     return () => {
       controller.abort();
     };
-  }, [productsApiUrl]);
+  }, [authSession?.token, isAuthResolved, productsApiUrl]);
 
   useEffect(() => {
     function syncAuthSession() {
@@ -239,6 +291,72 @@ export default function HomePage() {
       window.removeEventListener("storage", syncAuthSession);
     };
   }, []);
+
+  async function handleLogin(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setLoginError("");
+    setCreateUserError("");
+    setCreateUserSuccess("");
+
+    const email = loginForm.email.trim().toLowerCase();
+    const password = loginForm.password;
+
+    if (!isValidEmail(email)) {
+      setLoginError("Enter a valid email address.");
+      return;
+    }
+
+    if (!password) {
+      setLoginError("Password is required.");
+      return;
+    }
+
+    try {
+      setIsSigningIn(true);
+
+      const response = await fetch(buildApiUrl("/api/auth/login"), {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          email,
+          password
+        })
+      });
+
+      const result = await response.json().catch(() => null);
+
+      if (!response.ok || typeof result?.token !== "string") {
+        throw new Error(
+          result?.error?.message || result?.message || "Unable to sign in."
+        );
+      }
+
+      persistAuthSession(result.token);
+      setAuthSession(getStoredAuthSession());
+      setLoginForm(loginFormInitialState);
+      setError("");
+    } catch (loginRequestError) {
+      setLoginError(
+        loginRequestError instanceof Error
+          ? loginRequestError.message
+          : "Unable to sign in."
+      );
+    } finally {
+      setIsSigningIn(false);
+    }
+  }
+
+  function handleLogout() {
+    clearStoredAuthSession();
+    setAuthSession(null);
+    setProducts([]);
+    setError("");
+    setLoginError("");
+    setCreateUserError("");
+    setCreateUserSuccess("");
+  }
 
   async function handleCreateUser(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -272,7 +390,7 @@ export default function HomePage() {
     try {
       setIsCreatingUser(true);
 
-      const response = await fetch("/api/auth/register", {
+      const response = await fetch(buildApiUrl("/api/auth/register"), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -645,6 +763,206 @@ export default function HomePage() {
             gap: 18
           }}
         >
+          <div style={{ display: "grid", gap: 8 }}>
+            <h2
+              style={{
+                margin: 0,
+                fontSize: 28,
+                color: "#0f172a"
+              }}
+            >
+              Login access
+            </h2>
+            <p
+              style={{
+                margin: 0,
+                maxWidth: 760,
+                color: "#475569",
+                lineHeight: 1.7
+              }}
+            >
+              Sign in here before loading protected products or using admin-only features.
+            </p>
+          </div>
+
+          <div
+            style={{
+              display: "grid",
+              gap: 18,
+              padding: 24,
+              background: "#ffffff",
+              borderRadius: 22,
+              border: "1px solid rgba(148, 163, 184, 0.18)",
+              boxShadow: "0 18px 40px rgba(15, 23, 42, 0.08)"
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                flexWrap: "wrap",
+                justifyContent: "space-between",
+                gap: 12
+              }}
+            >
+              <div style={{ display: "grid", gap: 6 }}>
+                <strong style={{ fontSize: 20, color: "#0f172a" }}>Session</strong>
+                <span style={{ color: "#64748b" }}>
+                  {isAuthResolved
+                    ? authSession?.email || "Not signed in"
+                    : "Checking session..."}
+                </span>
+              </div>
+              <div
+                style={{
+                  alignSelf: "start",
+                  padding: "10px 14px",
+                  borderRadius: 999,
+                  background: isSignedIn ? "#dcfce7" : "#fee2e2",
+                  color: isSignedIn ? "#166534" : "#991b1b",
+                  fontWeight: 700
+                }}
+              >
+                {isSignedIn ? `Signed in${isAdmin ? " as admin" : ""}` : "Signed out"}
+              </div>
+            </div>
+
+            {loginError ? (
+              <div
+                style={{
+                  padding: 16,
+                  borderRadius: 18,
+                  background: "#fef2f2",
+                  border: "1px solid #fca5a5",
+                  color: "#991b1b"
+                }}
+              >
+                {loginError}
+              </div>
+            ) : null}
+
+            {isSignedIn ? (
+              <div
+                style={{
+                  display: "flex",
+                  flexWrap: "wrap",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  gap: 12
+                }}
+              >
+                <span style={{ color: "#475569", lineHeight: 1.7 }}>
+                  You can now load products and access features allowed for your role.
+                </span>
+                <button
+                  type="button"
+                  onClick={handleLogout}
+                  style={{
+                    width: "fit-content",
+                    padding: "14px 22px",
+                    border: "none",
+                    borderRadius: 14,
+                    background: "#0f172a",
+                    color: "#ffffff",
+                    fontSize: 16,
+                    fontWeight: 700,
+                    cursor: "pointer"
+                  }}
+                >
+                  Logout
+                </button>
+              </div>
+            ) : (
+              <form
+                onSubmit={handleLogin}
+                style={{
+                  display: "grid",
+                  gap: 16
+                }}
+              >
+                <label
+                  style={{
+                    display: "grid",
+                    gap: 8
+                  }}
+                >
+                  <span style={{ fontWeight: 700, color: "#334155" }}>Email</span>
+                  <input
+                    type="email"
+                    value={loginForm.email}
+                    onChange={(event) =>
+                      setLoginForm((current) => ({
+                        ...current,
+                        email: event.target.value
+                      }))
+                    }
+                    placeholder="Enter admin email"
+                    style={{
+                      width: "100%",
+                      padding: "14px 16px",
+                      borderRadius: 14,
+                      border: "1px solid #cbd5e1",
+                      fontSize: 16,
+                      outline: "none"
+                    }}
+                  />
+                </label>
+
+                <label
+                  style={{
+                    display: "grid",
+                    gap: 8
+                  }}
+                >
+                  <span style={{ fontWeight: 700, color: "#334155" }}>Password</span>
+                  <input
+                    type="password"
+                    value={loginForm.password}
+                    onChange={(event) =>
+                      setLoginForm((current) => ({
+                        ...current,
+                        password: event.target.value
+                      }))
+                    }
+                    placeholder="Enter password"
+                    style={{
+                      width: "100%",
+                      padding: "14px 16px",
+                      borderRadius: 14,
+                      border: "1px solid #cbd5e1",
+                      fontSize: 16,
+                      outline: "none"
+                    }}
+                  />
+                </label>
+
+                <button
+                  type="submit"
+                  disabled={isSigningIn}
+                  style={{
+                    width: "fit-content",
+                    padding: "14px 22px",
+                    border: "none",
+                    borderRadius: 14,
+                    background: isSigningIn ? "#94a3b8" : "#2563eb",
+                    color: "#ffffff",
+                    fontSize: 16,
+                    fontWeight: 700,
+                    cursor: isSigningIn ? "not-allowed" : "pointer"
+                  }}
+                >
+                  {isSigningIn ? "Signing in..." : "Sign in"}
+                </button>
+              </form>
+            )}
+          </div>
+        </section>
+
+        <section
+          style={{
+            display: "grid",
+            gap: 18
+          }}
+        >
           <div
             style={{
               display: "flex",
@@ -686,7 +1004,7 @@ export default function HomePage() {
                 fontWeight: 700
               }}
             >
-              {isLoading ? "Loading..." : `${products.length} items`}
+              {isLoading ? "Loading..." : isSignedIn ? `${products.length} items` : "Sign in first"}
             </div>
           </div>
 
@@ -716,6 +1034,19 @@ export default function HomePage() {
               }}
             >
               Loading products from {productsApiUrl}
+            </div>
+          ) : !isSignedIn ? (
+            <div
+              style={{
+                padding: 24,
+                borderRadius: 22,
+                background: "#ffffff",
+                border: "1px solid rgba(148, 163, 184, 0.18)",
+                boxShadow: "0 18px 40px rgba(15, 23, 42, 0.08)",
+                color: "#475569"
+              }}
+            >
+              Sign in to load products from the protected catalog API.
             </div>
           ) : (
             <div
