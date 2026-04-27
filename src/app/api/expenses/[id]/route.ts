@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { requireAuth, UserRole } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
-import { withRoute } from "@/lib/route";
+import { requireAuth, UserRole } from "../../../../lib/auth";
+import { prisma } from "../../../../lib/prisma";
+import { withRoute } from "../../../../lib/route";
 
 const paramsSchema = z.object({
   id: z.string().uuid()

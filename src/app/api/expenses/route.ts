@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
-import { requireAuth, UserRole } from "@/lib/auth";
-import { parseDateInput } from "@/lib/dates";
-import { prisma } from "@/lib/prisma";
-import { withRoute } from "@/lib/route";
-import { expenseCreateSchema, expenseFilterSchema } from "@/lib/schemas";
-import { parseBody, parseQuery } from "@/lib/validation";
+import { requireAuth, UserRole } from "../../../lib/auth";
+import { parseDateInput } from "../../../lib/dates";
+import { prisma } from "../../../lib/prisma";
+import { withRoute } from "../../../lib/route";
+import { expenseCreateSchema, expenseFilterSchema } from "../../../lib/schemas";
+import { parseBody, parseQuery } from "../../../lib/validation";
 
 export const GET = withRoute(async (request) => {
   await requireAuth(request, [UserRole.admin]);

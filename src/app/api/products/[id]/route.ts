@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { requireAuth, UserRole } from "@/lib/auth";
-import { ApiError } from "@/lib/errors";
-import { parseDateInput } from "@/lib/dates";
-import { updateProduct } from "@/lib/pos-data.js";
-import { withRoute } from "@/lib/route";
-import { productUpdateSchema } from "@/lib/schemas";
-import { parseBody } from "@/lib/validation";
+import { requireAuth, UserRole } from "../../../../lib/auth";
+import { ApiError } from "../../../../lib/errors";
+import { parseDateInput } from "../../../../lib/dates";
+import { updateProduct } from "../../../../lib/pos-data.js";
+import { withRoute } from "../../../../lib/route";
+import { productUpdateSchema } from "../../../../lib/schemas";
+import { parseBody } from "../../../../lib/validation";
 
 const paramsSchema = z.object({
   id: z.string().uuid()

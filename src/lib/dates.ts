@@ -1,4 +1,4 @@
-import { ApiError } from "@/lib/errors";
+import { ApiError } from "./errors";
 
 export function parseDateInput(value?: string, endOfDay = false) {
   if (!value) {

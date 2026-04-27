@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { ApiError } from "@/lib/errors";
+import { ApiError } from "./errors";
 
 export async function parseBody<TSchema extends z.ZodTypeAny>(
   request: Request,
