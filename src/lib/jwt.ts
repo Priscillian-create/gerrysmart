@@ -1,5 +1,5 @@
-import { SignJWT, jwtVerify } from "jose";
-import { getEnv } from "./env";
+﻿import { SignJWT, jwtVerify } from "jose";
+import { getEnv } from "./env.js";
 
 export type AuthTokenPayload = {
   sub: string;

@@ -1,11 +1,11 @@
-import { NextResponse } from "next/server";
-import { requireAdmin } from "../../../../lib/auth";
-import { ApiError } from "../../../../lib/errors";
-import { hashPassword } from "../../../../lib/password";
+﻿import { NextResponse } from "next/server";
+import { requireAdmin } from "../../../../lib/auth.js";
+import { ApiError } from "../../../../lib/errors.js";
+import { hashPassword } from "../../../../lib/password.js";
 import { createUser, findUserByEmail } from "../../../../lib/pos-data.js";
-import { withRoute } from "../../../../lib/route";
-import { registerSchema } from "../../../../lib/schemas";
-import { parseBody } from "../../../../lib/validation";
+import { withRoute } from "../../../../lib/route.js";
+import { registerSchema } from "../../../../lib/schemas.js";
+import { parseBody } from "../../../../lib/validation.js";
 
 export const POST = withRoute(async (request) => {
   await requireAdmin(request);

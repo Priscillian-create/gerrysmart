@@ -1,21 +1,25 @@
-import { NextResponse } from "next/server";
-import { z } from "zod";
-import { requireAuth, UserRole } from "../../../../lib/auth";
-import { prisma } from "../../../../lib/prisma";
-import { withRoute } from "../../../../lib/route";
+﻿import { NextResponse } from "next/server";
+import { requireAuth, UserRole } from "../../../lib/auth.js";
+import { createCheckoutSale } from "../../../lib/pos-data.js";
+import { withRoute } from "../../../lib/route.js";
+import { checkoutSchema } from "../../../lib/schemas.js";
+import { parseBody } from "../../../lib/validation.js";
 
-const paramsSchema = z.object({
-  id: z.string().uuid()
-});
+export const POST = withRoute(async (request) => {
+  await requireAuth(request, [UserRole.admin, UserRole.cashier]);
+  const body = await parseBody(request, checkoutSchema);
 
-export const DELETE = withRoute<{ id: string }>(async (request, context) => {
-  await requireAuth(request, [UserRole.admin]);
-
-  const { id } = paramsSchema.parse(await context.params);
-
-  await prisma.expense.delete({
-    where: { id }
+  const result = await createCheckoutSale({
+    items: body.items,
+    paymentMethod: body.paymentMethod,
+    idempotencyKey: body.idempotencyKey
   });
 
-  return new NextResponse(null, { status: 204 });
+  return NextResponse.json(
+    {
+      data: result.sale,
+      meta: { idempotentReplay: result.idempotentReplay }
+    },
+    { status: result.idempotentReplay ? 200 : 201 }
+  );
 });

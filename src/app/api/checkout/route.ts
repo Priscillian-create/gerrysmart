@@ -1,9 +1,9 @@
-import { NextResponse } from "next/server";
-import { requireAuth, UserRole } from "../../../lib/auth";
+﻿import { NextResponse } from "next/server";
+import { requireAuth, UserRole } from "../../../lib/auth.js";
 import { createCheckoutSale } from "../../../lib/pos-data.js";
-import { withRoute } from "../../../lib/route";
-import { checkoutSchema } from "../../../lib/schemas";
-import { parseBody } from "../../../lib/validation";
+import { withRoute } from "../../../lib/route.js";
+import { checkoutSchema } from "../../../lib/schemas.js";
+import { parseBody } from "../../../lib/validation.js";
 
 export const POST = withRoute(async (request) => {
   await requireAuth(request, [UserRole.admin, UserRole.cashier]);

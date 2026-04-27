@@ -1,6 +1,6 @@
-import type { NextRequest } from "next/server";
-import { ApiError } from "./errors";
-import { verifyAccessToken } from "./jwt";
+﻿import type { NextRequest } from "next/server";
+import { ApiError } from "./errors.js";
+import { verifyAccessToken } from "./jwt.js";
 
 export const UserRole = {
   admin: "admin",

@@ -1,9 +1,9 @@
-import { NextResponse } from "next/server";
-import { requireAuth, UserRole } from "../../../lib/auth";
-import { parseDateInput } from "../../../lib/dates";
-import { ApiError } from "../../../lib/errors";
+﻿import { NextResponse } from "next/server";
+import { requireAuth, UserRole } from "../../../lib/auth.js";
+import { parseDateInput } from "../../../lib/dates.js";
+import { ApiError } from "../../../lib/errors.js";
 import { listSales } from "../../../lib/pos-data.js";
-import { withRoute } from "../../../lib/route";
+import { withRoute } from "../../../lib/route.js";
 
 function resolveSalesRange(url: URL) {
   const fromParam =

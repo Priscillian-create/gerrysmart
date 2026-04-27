@@ -1,10 +1,10 @@
-import { NextResponse } from "next/server";
-import { requireAuth, UserRole } from "../../../lib/auth";
-import { parseDateInput } from "../../../lib/dates";
+﻿import { NextResponse } from "next/server";
+import { requireAuth, UserRole } from "../../../lib/auth.js";
+import { parseDateInput } from "../../../lib/dates.js";
 import { createProduct, listProducts } from "../../../lib/pos-data.js";
-import { withRoute } from "../../../lib/route";
-import { productCreateSchema, productFilterSchema } from "../../../lib/schemas";
-import { parseBody, parseQuery } from "../../../lib/validation";
+import { withRoute } from "../../../lib/route.js";
+import { productCreateSchema, productFilterSchema } from "../../../lib/schemas.js";
+import { parseBody, parseQuery } from "../../../lib/validation.js";
 
 export const GET = withRoute(async (request) => {
   await requireAuth(request, [UserRole.admin, UserRole.cashier]);
