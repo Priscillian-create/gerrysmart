@@ -1,1 +1,1 @@
-export { POST } from "@/app/api/auth/login/route";
+export { OPTIONS, POST } from "@/app/api/auth/login/route";

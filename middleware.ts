@@ -2,8 +2,6 @@ import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { verifyAccessToken } from "./src/lib/jwt.js";
 
-const DEFAULT_ALLOWED_ORIGINS = ["http://localhost:4000"];
-
 const publicRoutes = new Set([
   "/api/auth/login",
   "/api/health",
@@ -50,47 +48,10 @@ function getBearerToken(request: NextRequest) {
   return authorization.slice(7).trim();
 }
 
-function parseOriginList(rawValue: string | undefined) {
-  if (!rawValue) return [];
-  return rawValue
-    .split(",")
-    .map((value) => value.trim())
-    .filter((value) => value.length > 0);
-}
-
-function getAllowedOrigins() {
-  const origins = new Set(DEFAULT_ALLOWED_ORIGINS);
-
-  const envCandidates = [
-    process.env.CORS_ORIGINS,
-    process.env.FRONTEND_ORIGIN,
-    process.env.NEXT_PUBLIC_FRONTEND_ORIGIN,
-    process.env.FRONTEND_URL,
-    process.env.NEXT_PUBLIC_FRONTEND_URL
-  ];
-
-  for (const candidate of envCandidates) {
-    for (const origin of parseOriginList(candidate)) {
-      origins.add(origin);
-    }
-  }
-
-  return Array.from(origins);
-}
-
-function resolveAllowedOrigin(requestOrigin: string | null) {
-  const allowedOrigins = getAllowedOrigins();
-  const fallbackOrigin = allowedOrigins[0] ?? null;
-
-  if (!requestOrigin) return fallbackOrigin;
-  return allowedOrigins.includes(requestOrigin) ? requestOrigin : fallbackOrigin;
-}
-
 function buildCorsHeaders(origin: string | null) {
-  const allowedOrigin = resolveAllowedOrigin(origin);
   const headers = new Headers();
   headers.set("Vary", "Origin");
-  if (allowedOrigin) headers.set("Access-Control-Allow-Origin", allowedOrigin);
+  if (origin) headers.set("Access-Control-Allow-Origin", origin);
   headers.set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
   headers.set("Access-Control-Allow-Headers", "Content-Type, Authorization");
   headers.set("Access-Control-Allow-Credentials", "true");
