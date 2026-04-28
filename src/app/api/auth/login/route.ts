@@ -1,12 +1,12 @@
-﻿import { NextResponse } from "next/server";
-import { findUserByEmail } from "../../../../lib/pos-data.js";
-import { prisma } from "../../../../lib/prisma.js";
-import { signAccessToken } from "../../../../lib/jwt.js";
-import { hashPassword, verifyPassword } from "../../../../lib/password.js";
-import { withRoute } from "../../../../lib/route.js";
-import { parseBody } from "../../../../lib/validation.js";
-import { loginSchema } from "../../../../lib/schemas.js";
-import { ApiError } from "../../../../lib/errors.js";
+import { NextResponse } from "next/server";
+import { findUserByEmail } from "@/lib/pos-data";
+import { prisma } from "@/lib/prisma";
+import { signAccessToken } from "@/lib/jwt";
+import { hashPassword, verifyPassword } from "@/lib/password";
+import { withRoute } from "@/lib/route";
+import { parseBody } from "@/lib/validation";
+import { loginSchema } from "@/lib/schemas";
+import { ApiError } from "@/lib/errors";
 
 function resolveAccessRole(role: string | null | undefined) {
   if (role === "admin" || role === "cashier") {
@@ -49,9 +49,10 @@ export const POST = withRoute(async (request) => {
 
     user = {
       id: adminUser.id,
+      name: adminUser.name ?? null,
       email: adminUser.email,
       password: adminUser.password,
-      role: adminUser.role
+      role: adminUser.role ?? "admin"
     };
   }
 

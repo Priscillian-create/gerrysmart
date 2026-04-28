@@ -1,6 +1,6 @@
-﻿import { NextResponse } from "next/server";
-import { prisma } from "../../../lib/prisma.js";
-import { withRoute } from "../../../lib/route.js";
+import { NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
+import { withRoute } from "@/lib/route";
 
 export const GET = withRoute(async () => {
   const userCount = await prisma.user.count().catch(() => null);

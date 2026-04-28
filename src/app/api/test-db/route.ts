@@ -1,8 +1,8 @@
-﻿import { NextResponse } from "next/server";
-import { requireAuth, UserRole } from "../../../lib/auth.js";
-import { toNumber } from "../../../lib/numbers.js";
-import { prisma } from "../../../lib/prisma.js";
-import { withRoute } from "../../../lib/route.js";
+import { NextResponse } from "next/server";
+import { requireAuth, UserRole } from "@/lib/auth";
+import { toNumber } from "@/lib/numbers";
+import { prisma } from "@/lib/prisma";
+import { withRoute } from "@/lib/route";
 
 export const GET = withRoute(async (request) => {
   await requireAuth(request, [UserRole.admin]);

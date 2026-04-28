@@ -1,12 +1,12 @@
-﻿import { NextResponse } from "next/server";
-import { ApiError } from "../../../lib/errors.js";
-import { requireAuth, UserRole } from "../../../lib/auth.js";
-import { parseDateInput } from "../../../lib/dates.js";
-import { toNumber } from "../../../lib/numbers.js";
-import { prisma } from "../../../lib/prisma.js";
-import { withRoute } from "../../../lib/route.js";
-import { purchaseCreateSchema, purchaseFilterSchema } from "../../../lib/schemas.js";
-import { parseBody, parseQuery } from "../../../lib/validation.js";
+import { NextResponse } from "next/server";
+import { ApiError } from "@/lib/errors";
+import { requireAuth, UserRole } from "@/lib/auth";
+import { parseDateInput } from "@/lib/dates";
+import { toNumber } from "@/lib/numbers";
+import { prisma } from "@/lib/prisma";
+import { withRoute } from "@/lib/route";
+import { purchaseCreateSchema, purchaseFilterSchema } from "@/lib/schemas";
+import { parseBody, parseQuery } from "@/lib/validation";
 
 function serializePurchase(purchase: any, product?: any | null) {
   return {

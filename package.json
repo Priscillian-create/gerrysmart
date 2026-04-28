@@ -5,10 +5,10 @@
   "type": "module",
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
+    "build": "set NEXT_DIST_DIR=.next-build&& node scripts/clean-next.cjs && next build",
+    "start": "set NEXT_DIST_DIR=.next-build&& next start",
     "lint": "set ESLINT_USE_FLAT_CONFIG=false&& next lint",
-    "postinstall": "node scripts/run-prisma.cjs generate",
+    "postinstall": "node scripts/postinstall.cjs",
     "prisma:generate": "node scripts/run-prisma.cjs generate",
     "prisma:push": "node scripts/run-prisma.cjs db push",
     "prisma:seed": "node prisma/seed.js"

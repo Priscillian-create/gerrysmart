@@ -1,1 +1,1 @@
-export { DELETE } from "@/app/api/expenses/[id]/route";
+export { POST } from "@/app/api/expenses/[id]/route";

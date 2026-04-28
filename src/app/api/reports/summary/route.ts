@@ -1,9 +1,9 @@
-﻿import { NextResponse } from "next/server";
-import { requireAuth, UserRole } from "../../../../lib/auth.js";
-import { resolveDateRange } from "../../../../lib/dates.js";
-import { roundCurrency, toNumber } from "../../../../lib/numbers.js";
-import { getSummaryMetrics } from "../../../../lib/reporting.js";
-import { withRoute } from "../../../../lib/route.js";
+import { NextResponse } from "next/server";
+import { requireAuth, UserRole } from "@/lib/auth";
+import { resolveDateRange } from "@/lib/dates";
+import { roundCurrency, toNumber } from "@/lib/numbers";
+import { getSummaryMetrics } from "@/lib/reporting";
+import { withRoute } from "@/lib/route";
 
 export const GET = withRoute(async (request) => {
   await requireAuth(request, [UserRole.admin]);

@@ -1,5 +1,5 @@
-﻿import type { NextRequest } from "next/server";
-import { handleApiError } from "./errors.js";
+import type { NextRequest } from "next/server";
+import { handleApiError } from "@/lib/errors";
 
 type RouteContext<TParams = Record<string, string>> = {
   params: Promise<TParams>;

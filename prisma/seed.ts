@@ -1,7 +1,8 @@
-import { PrismaClient, UserRole } from "@prisma/client";
+import { PrismaClient } from "@prisma/client";
 import { hashPassword } from "../src/lib/password.js";
 
 const prisma = new PrismaClient();
+const ADMIN_ROLE = "admin" as const;
 
 async function main() {
   const email = process.env.ADMIN_EMAIL;
@@ -20,7 +21,7 @@ async function main() {
       where: { id: existing.id },
       data: {
         password: passwordHash,
-        role: UserRole.admin
+        role: ADMIN_ROLE
       }
     });
     console.log(`Updated existing admin user: ${email}`);
@@ -29,7 +30,7 @@ async function main() {
       data: {
         email,
         password: passwordHash,
-        role: UserRole.admin
+        role: ADMIN_ROLE
       }
     });
     console.log(`Created admin user: ${email}`);
