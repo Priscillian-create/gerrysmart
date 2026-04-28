@@ -1,5 +1,6 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
+import { buildCorsHeaders } from "@/lib/cors";
 import { verifyAccessToken } from "./src/lib/jwt.js";
 
 const publicRoutes = new Set([
@@ -46,16 +47,6 @@ function getBearerToken(request: NextRequest) {
     throw new Error("Missing token");
   }
   return authorization.slice(7).trim();
-}
-
-function buildCorsHeaders(origin: string | null) {
-  const headers = new Headers();
-  headers.set("Vary", "Origin");
-  if (origin) headers.set("Access-Control-Allow-Origin", origin);
-  headers.set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
-  headers.set("Access-Control-Allow-Headers", "Content-Type, Authorization");
-  headers.set("Access-Control-Allow-Credentials", "true");
-  return headers;
 }
 
 function isLegacyApiPath(pathname: string) {
