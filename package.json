@@ -4,10 +4,10 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "next dev",
-    "build": "set NEXT_DIST_DIR=.next-build&& node scripts/clean-next.cjs && next build",
-    "start": "set NEXT_DIST_DIR=.next-build&& next start",
-    "lint": "set ESLINT_USE_FLAT_CONFIG=false&& next lint",
+    "dev": "next dev --webpack",
+    "build": "node scripts/clean-next.cjs && next build --webpack",
+    "start": "next start",
+    "lint": "next lint",
     "postinstall": "node scripts/postinstall.cjs",
     "prisma:generate": "node scripts/run-prisma.cjs generate",
     "prisma:push": "node scripts/run-prisma.cjs db push",
@@ -30,7 +30,6 @@
   },
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",
-    "@types/next": "^8.0.7",
     "@types/node": "^22.14.0",
     "@types/react": "^19.0.10",
     "@types/react-dom": "^19.0.4",
