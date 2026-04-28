@@ -4,6 +4,7 @@ import { ApiError } from "@/lib/errors";
 import { hashPassword } from "@/lib/password";
 import { createUser, findUserByEmail } from "@/lib/pos-data";
 import { withRoute } from "@/lib/route";
+import { createCorsPreflightResponse } from "@/lib/route";
 import { registerSchema } from "@/lib/schemas";
 import { parseBody } from "@/lib/validation";
 
@@ -39,3 +40,7 @@ export const POST = withRoute(async (request) => {
     { status: 201 }
   );
 });
+
+export function OPTIONS(request: Request) {
+  return createCorsPreflightResponse(request);
+}

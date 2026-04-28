@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { signAccessToken } from "@/lib/jwt";
 import { hashPassword, verifyPassword } from "@/lib/password";
 import { withRoute } from "@/lib/route";
+import { createCorsPreflightResponse } from "@/lib/route";
 import { parseBody } from "@/lib/validation";
 import { loginSchema } from "@/lib/schemas";
 import { ApiError } from "@/lib/errors";
@@ -100,3 +101,7 @@ export const POST = withRoute(async (request) => {
 
   return response;
 });
+
+export function OPTIONS(request: Request) {
+  return createCorsPreflightResponse(request);
+}
