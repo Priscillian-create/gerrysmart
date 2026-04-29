@@ -12,7 +12,7 @@ type RouteHandler<TParams = Record<string, string>> = (
   context: RouteContext<TParams>
 ) => Promise<Response>;
 
-function withCors(response: Response, request: Pick<Request, "headers">) {
+function withCors(response: Response, request: Request | NextRequest) {
   const nextResponse = new NextResponse(response.body, {
     status: response.status,
     statusText: response.statusText,
@@ -24,7 +24,7 @@ function withCors(response: Response, request: Pick<Request, "headers">) {
   return nextResponse;
 }
 
-export function createCorsPreflightResponse(request: Pick<Request, "headers">) {
+export function createCorsPreflightResponse(request: Request | NextRequest) {
   return new NextResponse(null, {
     status: 200,
     headers: buildCorsHeaders(request.headers.get("origin"))
