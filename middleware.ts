@@ -14,6 +14,7 @@ const legacyRoutePrefixes = [
   "/expenses",
   "/products",
   "/purchases",
+  "/reports",
   "/sales",
   "/stock"
 ];
@@ -112,6 +113,7 @@ export const config = {
     "/products/:path*",
     "/sales/:path*",
     "/expenses/:path*",
-    "/purchases/:path*"
+    "/purchases/:path*",
+    "/reports/:path*"
   ]
 };
