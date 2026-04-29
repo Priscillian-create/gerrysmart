@@ -1,1 +1,1 @@
-export { GET, OPTIONS } from "@/app/api/products/[id]/route";
+export { DELETE, GET, OPTIONS, PUT } from "@/app/api/products/[id]/route";

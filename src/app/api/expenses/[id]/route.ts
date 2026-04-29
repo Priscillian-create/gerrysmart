@@ -1,27 +1,30 @@
 import { NextResponse } from "next/server";
 import { requireAuth, UserRole } from "@/lib/auth";
-import { createCheckoutSale } from "@/lib/pos-data";
+import { ApiError } from "@/lib/errors";
+import { prisma } from "@/lib/prisma";
 import { createCorsPreflightResponse, withRoute } from "@/lib/route";
-import { checkoutSchema } from "@/lib/schemas";
-import { parseBody } from "@/lib/validation";
 
-export const POST = withRoute(async (request) => {
-  await requireAuth(request, [UserRole.admin, UserRole.cashier]);
-  const body = await parseBody(request, checkoutSchema);
+type ExpenseRouteContext = {
+  params: Promise<{
+    id: string;
+  }>;
+};
 
-  const result = await createCheckoutSale({
-    items: body.items,
-    paymentMethod: body.paymentMethod,
-    idempotencyKey: body.idempotencyKey
+export const DELETE = withRoute(async (request, context: ExpenseRouteContext) => {
+  await requireAuth(request, [UserRole.admin]);
+
+  const { id } = await context.params;
+  const result = await prisma.expense.deleteMany({
+    where: { id }
   });
 
-  return NextResponse.json(
-    {
-      data: result.sale,
-      meta: { idempotentReplay: result.idempotentReplay }
-    },
-    { status: result.idempotentReplay ? 200 : 201 }
-  );
+  if (result.count === 0) {
+    throw new ApiError(404, "NOT_FOUND", "Expense not found.");
+  }
+
+  return NextResponse.json({
+    success: true
+  });
 });
 
 export function OPTIONS(request: Request) {
