@@ -48,7 +48,13 @@ export async function requireAuth(
   roles?: UserRole[]
 ) {
   const token = getBearerToken(request);
-  const payload = await verifyAccessToken(token);
+  let payload;
+
+  try {
+    payload = await verifyAccessToken(token);
+  } catch {
+    throw new ApiError(401, "UNAUTHORIZED", "Invalid or expired bearer token.");
+  }
 
   if (roles && !roles.includes(payload.role)) {
     throw new ApiError(403, "FORBIDDEN", "You do not have access to this resource.");

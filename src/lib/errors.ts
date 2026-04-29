@@ -1,6 +1,7 @@
 import { Prisma } from "@prisma/client";
 import { NextResponse } from "next/server";
 import { ZodError } from "zod";
+import { PosDataError } from "@/lib/pos-data.js";
 
 export class ApiError extends Error {
   constructor(
@@ -15,6 +16,19 @@ export class ApiError extends Error {
 
 export function handleApiError(error: unknown) {
   if (error instanceof ApiError) {
+    return NextResponse.json(
+      {
+        error: {
+          code: error.code,
+          message: error.message,
+          details: error.details ?? null
+        }
+      },
+      { status: error.statusCode }
+    );
+  }
+
+  if (error instanceof PosDataError) {
     return NextResponse.json(
       {
         error: {
