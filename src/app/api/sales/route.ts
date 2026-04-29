@@ -3,7 +3,7 @@ import { requireAuth, UserRole } from "@/lib/auth";
 import { parseDateInput } from "@/lib/dates";
 import { ApiError } from "@/lib/errors";
 import { listSales } from "@/lib/pos-data";
-import { withRoute } from "@/lib/route";
+import { createCorsPreflightResponse, withRoute } from "@/lib/route";
 
 function resolveSalesRange(url: URL) {
   const fromParam =
@@ -47,3 +47,7 @@ export const GET = withRoute(async (request) => {
     }
   });
 });
+
+export function OPTIONS(request: Request) {
+  return createCorsPreflightResponse(request);
+}

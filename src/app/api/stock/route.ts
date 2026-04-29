@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireAuth, UserRole } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { withRoute } from "@/lib/route";
+import { createCorsPreflightResponse, withRoute } from "@/lib/route";
 
 export const GET = withRoute(async (request) => {
   await requireAuth(request, [UserRole.admin, UserRole.cashier]);
@@ -34,3 +34,7 @@ export const GET = withRoute(async (request) => {
     }))
   });
 });
+
+export function OPTIONS(request: Request) {
+  return createCorsPreflightResponse(request);
+}

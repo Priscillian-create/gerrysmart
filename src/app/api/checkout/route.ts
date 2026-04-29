@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireAuth, UserRole } from "@/lib/auth";
 import { createCheckoutSale } from "@/lib/pos-data";
-import { withRoute } from "@/lib/route";
+import { createCorsPreflightResponse, withRoute } from "@/lib/route";
 import { checkoutSchema } from "@/lib/schemas";
 import { parseBody } from "@/lib/validation";
 
@@ -23,3 +23,7 @@ export const POST = withRoute(async (request) => {
     { status: result.idempotentReplay ? 200 : 201 }
   );
 });
+
+export function OPTIONS(request: Request) {
+  return createCorsPreflightResponse(request);
+}

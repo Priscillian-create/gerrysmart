@@ -4,7 +4,7 @@ import { requireAuth, UserRole } from "@/lib/auth";
 import { parseDateInput } from "@/lib/dates";
 import { toNumber } from "@/lib/numbers";
 import { prisma } from "@/lib/prisma";
-import { withRoute } from "@/lib/route";
+import { createCorsPreflightResponse, withRoute } from "@/lib/route";
 import { purchaseCreateSchema, purchaseFilterSchema } from "@/lib/schemas";
 import { parseBody, parseQuery } from "@/lib/validation";
 
@@ -156,3 +156,7 @@ export const POST = withRoute(async (request) => {
     { status: 201 }
   );
 });
+
+export function OPTIONS(request: Request) {
+  return createCorsPreflightResponse(request);
+}
