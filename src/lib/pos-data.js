@@ -55,9 +55,17 @@ function ensureDatabaseConfigured() {
 function getMysqlDatabaseUrl() {
   ensureDatabaseConfigured();
 
-  const databaseUrl = new URL(process.env.DATABASE_URL);
-  databaseUrl.searchParams.delete("sslaccept");
-  return databaseUrl.toString();
+  try {
+    const databaseUrl = new URL(process.env.DATABASE_URL);
+
+    if (/tidbcloud\.com$/i.test(databaseUrl.hostname)) {
+      databaseUrl.searchParams.set("sslaccept", "strict");
+    }
+
+    return databaseUrl.toString();
+  } catch {
+    return process.env.DATABASE_URL;
+  }
 }
 
 function getMysqlPool() {
