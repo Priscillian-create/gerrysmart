@@ -1,5 +1,6 @@
 import type { NextRequest } from "next/server";
 import { ApiError } from "@/lib/errors";
+import type { AuthTokenPayload } from "@/lib/jwt";
 import { verifyAccessToken } from "@/lib/jwt";
 
 export const UserRole = {
@@ -10,50 +11,76 @@ export const UserRole = {
 
 export type UserRole = (typeof UserRole)[keyof typeof UserRole];
 
-function getCookieToken(request: NextRequest) {
-  const tokenCookieKeys = [
-    "authToken",
-    "pos_access_token",
-    "accessToken",
-    "token",
-    "jwt"
-  ];
+export function getBearerToken(request: NextRequest) {
+  const auth = request.headers.get("authorization");
 
-  for (const key of tokenCookieKeys) {
-    const value = request.cookies.get(key)?.value?.trim();
-    if (value) {
-      return value;
-    }
+  if (!auth) {
+    throw new ApiError(401, "UNAUTHORIZED", "Missing Authorization header.");
   }
 
-  return null;
+  if (!auth.startsWith("Bearer ")) {
+    throw new ApiError(401, "UNAUTHORIZED", "Invalid Authorization format.");
+  }
+
+  return auth.replace("Bearer ", "").trim();
 }
 
-export function getBearerToken(request: NextRequest) {
-  const authorization = request.headers.get("authorization");
-
-  if (!authorization?.startsWith("Bearer ")) {
-    const cookieToken = getCookieToken(request);
-    if (cookieToken) {
-      return cookieToken;
-    }
-    throw new ApiError(401, "UNAUTHORIZED", "Missing bearer token.");
+function getForwardedAuthPayload(request: NextRequest): AuthTokenPayload | null {
+  if (request.headers.get("x-auth-verified") !== "1") {
+    return null;
   }
 
-  return authorization.slice(7).trim();
+  const sub = request.headers.get("x-auth-sub");
+  const id = request.headers.get("x-auth-id");
+  const email = request.headers.get("x-auth-email");
+  const role = request.headers.get("x-auth-role");
+
+  if (!sub || !id || !email) {
+    return null;
+  }
+
+  if (role !== "admin" && role !== "cashier") {
+    return null;
+  }
+
+  return {
+    sub,
+    id,
+    email,
+    role
+  };
 }
 
 export async function requireAuth(
   request: NextRequest,
   roles?: UserRole[]
 ) {
-  const token = getBearerToken(request);
-  let payload;
+  console.log("ROUTE AUTH HEADER:", request.headers.get("authorization"));
+  console.log("ROUTE JWT_SECRET_LOADED:", !!process.env.JWT_SECRET);
 
-  try {
-    payload = await verifyAccessToken(token);
-  } catch {
-    throw new ApiError(401, "UNAUTHORIZED", "Invalid or expired bearer token.");
+  let payload = getForwardedAuthPayload(request);
+
+  if (payload) {
+    console.log("ROUTE AUTH PAYLOAD:", payload);
+  } else {
+    const token = getBearerToken(request);
+
+    try {
+      console.log("ROUTE TOKEN RECEIVED:", token);
+      payload = await verifyAccessToken(token);
+      console.log("ROUTE JWT VALID:", payload);
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Invalid or expired bearer token.";
+
+      console.error("ROUTE JWT VERIFICATION FAILED:", {
+        message,
+        stack: error instanceof Error ? error.stack : undefined
+      });
+      throw new ApiError(401, "UNAUTHORIZED", "Invalid or expired bearer token.", {
+        debug: message
+      });
+    }
   }
 
   if (roles && !roles.includes(payload.role)) {

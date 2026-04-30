@@ -1,6 +1,7 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { buildCorsHeaders } from "@/lib/cors";
+import type { AuthTokenPayload } from "@/lib/jwt";
 import { verifyAccessToken } from "@/lib/jwt";
 
 const publicRoutes = new Set([
@@ -48,6 +49,27 @@ function getErrorDetails(error: unknown) {
   };
 }
 
+function buildAuthenticatedRequestHeaders(
+  request: NextRequest,
+  decoded: AuthTokenPayload
+) {
+  const requestHeaders = new Headers(request.headers);
+
+  requestHeaders.delete("x-auth-verified");
+  requestHeaders.delete("x-auth-sub");
+  requestHeaders.delete("x-auth-id");
+  requestHeaders.delete("x-auth-email");
+  requestHeaders.delete("x-auth-role");
+
+  requestHeaders.set("x-auth-verified", "1");
+  requestHeaders.set("x-auth-sub", decoded.sub);
+  requestHeaders.set("x-auth-id", decoded.id ?? decoded.sub);
+  requestHeaders.set("x-auth-email", decoded.email);
+  requestHeaders.set("x-auth-role", decoded.role);
+
+  return requestHeaders;
+}
+
 function isLegacyApiPath(pathname: string) {
   return legacyRoutePrefixes.some(
     (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`)
@@ -84,19 +106,25 @@ export async function middleware(request: NextRequest) {
 
   try {
     const token = getBearerToken(request);
+    console.log("TOKEN RECEIVED:", token);
     const decoded = await verifyAccessToken(token);
     console.log("JWT VALID:", decoded);
-    const res = NextResponse.next();
+    const res = NextResponse.next({
+      request: {
+        headers: buildAuthenticatedRequestHeaders(request, decoded)
+      }
+    });
     corsHeaders.forEach((v, k) => res.headers.set(k, v));
     return res;
   } catch (error) {
     const errorDetails = getErrorDetails(error);
-    console.error("JWT ERROR:", errorDetails);
+    console.error("JWT VERIFICATION FAILED:", errorDetails);
     const res = NextResponse.json(
       {
         error: {
           code: "UNAUTHORIZED",
           message: "Invalid or expired token",
+          debug: errorDetails.message,
           details: errorDetails.message
         }
       },
