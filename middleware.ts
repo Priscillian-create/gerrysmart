@@ -1,10 +1,11 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { buildCorsHeaders } from "@/lib/cors";
-import { verifyAccessToken } from "./src/lib/jwt.js";
+import { verifyAccessToken } from "@/lib/jwt";
 
 const publicRoutes = new Set([
   "/api/auth/login",
+  "/api/debug/headers",
   "/api/health",
   "/auth/login"
 ]);
@@ -19,35 +20,32 @@ const legacyRoutePrefixes = [
   "/stock"
 ];
 
-function getCookieToken(request: NextRequest) {
-  const tokenCookieKeys = [
-    "authToken",
-    "pos_access_token",
-    "accessToken",
-    "token",
-    "jwt"
-  ];
+function getBearerToken(request: NextRequest) {
+  const auth = request.headers.get("authorization");
 
-  for (const key of tokenCookieKeys) {
-    const value = request.cookies.get(key)?.value?.trim();
-    if (value) {
-      return value;
-    }
+  if (!auth) {
+    throw new Error("Missing Authorization header");
   }
 
-  return null;
+  if (!auth.startsWith("Bearer ")) {
+    throw new Error("Invalid Authorization format");
+  }
+
+  return auth.replace("Bearer ", "").trim();
 }
 
-function getBearerToken(request: NextRequest) {
-  const authorization = request.headers.get("authorization");
-  if (!authorization?.startsWith("Bearer ")) {
-    const cookieToken = getCookieToken(request);
-    if (cookieToken) {
-      return cookieToken;
-    }
-    throw new Error("Missing token");
+function getErrorDetails(error: unknown) {
+  if (error instanceof Error) {
+    return {
+      message: error.message,
+      stack: error.stack
+    };
   }
-  return authorization.slice(7).trim();
+
+  return {
+    message: String(error),
+    stack: undefined
+  };
 }
 
 function isLegacyApiPath(pathname: string) {
@@ -63,6 +61,10 @@ export async function middleware(request: NextRequest) {
   const isApiPath = pathname.startsWith("/api");
   const isLegacyPath = isLegacyApiPath(pathname);
   const requiresCorsHandling = isApiPath || isLegacyPath;
+
+  console.log("ALL HEADERS:", Object.fromEntries(request.headers.entries()));
+  console.log("AUTH HEADER:", request.headers.get("authorization"));
+  console.log("JWT_SECRET exists:", !!process.env.JWT_SECRET);
 
   if (request.method === "OPTIONS" && requiresCorsHandling) {
     return new NextResponse(null, { status: 200, headers: corsHeaders });
@@ -82,16 +84,20 @@ export async function middleware(request: NextRequest) {
 
   try {
     const token = getBearerToken(request);
-    await verifyAccessToken(token);
+    const decoded = await verifyAccessToken(token);
+    console.log("JWT VALID:", decoded);
     const res = NextResponse.next();
     corsHeaders.forEach((v, k) => res.headers.set(k, v));
     return res;
-  } catch {
+  } catch (error) {
+    const errorDetails = getErrorDetails(error);
+    console.error("JWT ERROR:", errorDetails);
     const res = NextResponse.json(
       {
         error: {
           code: "UNAUTHORIZED",
-          message: "Authentication is required."
+          message: "Invalid or expired token",
+          details: errorDetails.message
         }
       },
       { status: 401 }

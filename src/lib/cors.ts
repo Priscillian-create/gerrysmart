@@ -32,16 +32,11 @@ export function resolveAllowedOrigin(origin: string | null) {
 
 export function buildCorsHeaders(origin: string | null) {
   const headers = new Headers();
-  const allowedOrigin = resolveAllowedOrigin(origin);
 
   headers.set("Vary", "Origin");
+  headers.set("Access-Control-Allow-Origin", "*");
   headers.set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
-  headers.set("Access-Control-Allow-Headers", "Content-Type, Authorization, Set-Cookie");
-  headers.set("Access-Control-Allow-Credentials", "true");
-
-  if (allowedOrigin) {
-    headers.set("Access-Control-Allow-Origin", allowedOrigin);
-  }
+  headers.set("Access-Control-Allow-Headers", "Content-Type, Authorization");
 
   return headers;
 }

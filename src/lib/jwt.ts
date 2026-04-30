@@ -1,5 +1,4 @@
 import { SignJWT, jwtVerify } from "jose";
-import { getEnv } from "@/lib/env";
 
 export type AuthTokenPayload = {
   sub: string;
@@ -7,6 +6,24 @@ export type AuthTokenPayload = {
   email: string;
   role: "admin" | "cashier";
 };
+
+function getJwtConfig() {
+  const jwtSecret = process.env.JWT_SECRET?.trim();
+  const jwtExpiresIn = process.env.JWT_EXPIRES_IN?.trim() || "12h";
+
+  if (!jwtSecret) {
+    throw new Error("JWT_SECRET is not configured.");
+  }
+
+  if (jwtSecret.length < 32) {
+    throw new Error("JWT_SECRET must be at least 32 characters.");
+  }
+
+  return {
+    secret: new TextEncoder().encode(jwtSecret),
+    expiresIn: jwtExpiresIn
+  };
+}
 
 function parseRole(role: unknown): AuthTokenPayload["role"] {
   if (role === "admin" || role === "cashier") {
@@ -17,8 +34,7 @@ function parseRole(role: unknown): AuthTokenPayload["role"] {
 }
 
 export async function signAccessToken(payload: AuthTokenPayload) {
-  const env = getEnv();
-  const secret = new TextEncoder().encode(env.JWT_SECRET);
+  const jwt = getJwtConfig();
 
   return new SignJWT({
     id: payload.sub,
@@ -28,14 +44,13 @@ export async function signAccessToken(payload: AuthTokenPayload) {
     .setProtectedHeader({ alg: "HS256" })
     .setSubject(payload.sub)
     .setIssuedAt()
-    .setExpirationTime(env.JWT_EXPIRES_IN)
-    .sign(secret);
+    .setExpirationTime(jwt.expiresIn)
+    .sign(jwt.secret);
 }
 
 export async function verifyAccessToken(token: string) {
-  const env = getEnv();
-  const secret = new TextEncoder().encode(env.JWT_SECRET);
-  const { payload } = await jwtVerify(token, secret);
+  const jwt = getJwtConfig();
+  const { payload } = await jwtVerify(token, jwt.secret);
 
   return {
     sub: String(payload.sub),
