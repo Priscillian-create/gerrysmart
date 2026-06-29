@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireAuth, UserRole } from "@/lib/auth";
 import { parseDateInput } from "@/lib/dates";
+import { ensureExpenseTable } from "@/lib/expenses";
 import { prisma } from "@/lib/prisma";
 import { createCorsPreflightResponse, withRoute } from "@/lib/route";
 import { expenseCreateSchema, expenseFilterSchema } from "@/lib/schemas";
@@ -8,6 +9,7 @@ import { parseBody, parseQuery } from "@/lib/validation";
 
 export const GET = withRoute(async (request) => {
   await requireAuth(request, [UserRole.admin]);
+  await ensureExpenseTable();
 
   const query = parseQuery(request.nextUrl, expenseFilterSchema);
 
@@ -36,6 +38,7 @@ export const GET = withRoute(async (request) => {
 
 export const POST = withRoute(async (request) => {
   await requireAuth(request, [UserRole.admin]);
+  await ensureExpenseTable();
 
   const body = await parseBody(request, expenseCreateSchema);
 

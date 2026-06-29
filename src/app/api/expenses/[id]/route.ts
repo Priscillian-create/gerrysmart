@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireAuth, UserRole } from "@/lib/auth";
 import { ApiError } from "@/lib/errors";
+import { ensureExpenseTable } from "@/lib/expenses";
 import { prisma } from "@/lib/prisma";
 import { createCorsPreflightResponse, withRoute } from "@/lib/route";
 
@@ -12,6 +13,7 @@ type ExpenseRouteContext = {
 
 export const DELETE = withRoute(async (request, context: ExpenseRouteContext) => {
   await requireAuth(request, [UserRole.admin]);
+  await ensureExpenseTable();
 
   const { id } = await context.params;
   const result = await prisma.expense.deleteMany({
