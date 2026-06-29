@@ -1,0 +1,14 @@
+.next/
+.next-build/
+node_modules/
+coverage/
+dist/
+generated/
+
+.env
+.env.local
+.env.production
+
+*.log
+*.tgz
+*.tsbuildinfo
