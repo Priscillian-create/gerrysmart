@@ -11,7 +11,9 @@ export default function handler(req, res) {
   function getAllowedOrigins() {
     const origins = new Set([
       "http://localhost:4000",
-      "https://pgerry.netlify.app"
+      "https://pgerry.netlify.app",
+      "https://pagerry.com",
+      "https://www.pagerry.com"
     ]);
 
     for (const origin of parseOriginList(process.env.CORS_ORIGINS)) {

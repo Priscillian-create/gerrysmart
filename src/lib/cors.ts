@@ -1,6 +1,8 @@
 const DEFAULT_ALLOWED_ORIGINS = [
   "http://localhost:4000",
-  "https://pgerry.netlify.app"
+  "https://pgerry.netlify.app",
+  "https://pagerry.com",
+  "https://www.pagerry.com"
 ];
 
 function parseOriginList(rawValue: string | undefined) {
